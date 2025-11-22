@@ -11,12 +11,6 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "L4Pose"
-          }
-        },
-        {
           "type": "path",
           "data": {
             "pathName": "Mid-2-D-S2"
@@ -26,24 +20,6 @@
           "type": "wait",
           "data": {
             "waitTime": 1.5
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "score"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Leave-D"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "defaultPoses"
           }
         }
       ]

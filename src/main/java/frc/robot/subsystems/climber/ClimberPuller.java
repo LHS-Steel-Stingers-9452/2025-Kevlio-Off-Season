@@ -12,12 +12,12 @@ import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
-public class Climber extends SubsystemBase {
+public class ClimberPuller extends SubsystemBase {
 
 
     private final TalonFX  climberKraken = new TalonFX(10);
     
-    public Climber() {
+    public ClimberPuller() {
 
         var motorOutputConfig =
             new MotorOutputConfigs()

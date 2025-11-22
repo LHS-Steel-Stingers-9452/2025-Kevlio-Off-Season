@@ -3,29 +3,29 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 5.897950819672132,
+        "x": 6.317520491803278,
         "y": 3.8032274590163935
       },
       "prevControl": null,
       "nextControl": {
-        "x": 6.318661268021863,
-        "y": 3.791718981515936
+        "x": 5.791828616284407,
+        "y": 3.7967958999653924
       },
       "isLocked": false,
-      "linkedName": "step-2-end"
+      "linkedName": "At-D"
     },
     {
       "anchor": {
-        "x": 6.737090163934426,
+        "x": 5.897950819672132,
         "y": 3.8032274590163935
       },
       "prevControl": {
-        "x": 6.080294219543695,
-        "y": 3.8099876007069144
+        "x": 6.147939964638024,
+        "y": 3.805557136938777
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Walter"
+      "linkedName": "step-2-end"
     }
   ],
   "rotationTargets": [],
@@ -42,10 +42,10 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -178.69804732742114
+    "rotation": 180.0
   },
   "reversed": false,
-  "folder": null,
+  "folder": "MiddlePaths",
   "idealStartingState": {
     "velocity": 0,
     "rotation": 180.0

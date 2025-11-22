@@ -3,29 +3,29 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 5.897950819672132,
-        "y": 3.8032274590163935
+        "x": 5.130737704918032,
+        "y": 2.49656762295082
       },
       "prevControl": null,
       "nextControl": {
-        "x": 6.318661268021863,
-        "y": 3.791718981515936
+        "x": 5.040992935090815,
+        "y": 2.7299040245015846
       },
       "isLocked": false,
-      "linkedName": "step-2-end"
+      "linkedName": "low-C-S1"
     },
     {
       "anchor": {
-        "x": 6.737090163934426,
-        "y": 3.8032274590163935
+        "x": 4.914959016393443,
+        "y": 2.940112704918032
       },
       "prevControl": {
-        "x": 6.080294219543695,
-        "y": 3.8099876007069144
+        "x": 5.071132778282049,
+        "y": 2.744895502557275
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Walter"
+      "linkedName": "low-C-S2"
     }
   ],
   "rotationTargets": [],
@@ -42,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -178.69804732742114
+    "rotation": 118.9264258352536
   },
   "reversed": false,
-  "folder": null,
+  "folder": "LowWallPaths",
   "idealStartingState": {
     "velocity": 0,
-    "rotation": 180.0
+    "rotation": 118.20162821869471
   },
   "useDefaultConstraints": true
 }

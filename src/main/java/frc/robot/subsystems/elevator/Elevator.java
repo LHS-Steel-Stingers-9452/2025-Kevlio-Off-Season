@@ -72,7 +72,7 @@ private final SysIdRoutine m_sysIdRoutine =
             .withGravityType(GravityTypeValue.Elevator_Static)
             .withKA(0)
             .withKG(0.68)
-            .withKP(0.8)
+            .withKP(1)  //8
             .withKS(0.2)
             .withKV(1.058);
 

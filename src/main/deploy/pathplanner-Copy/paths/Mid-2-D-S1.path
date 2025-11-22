@@ -3,35 +3,47 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 5.897950819672132,
+        "x": 7.192622950819672,
         "y": 3.8032274590163935
       },
       "prevControl": null,
       "nextControl": {
-        "x": 6.318661268021863,
-        "y": 3.791718981515936
+        "x": 6.186054927373362,
+        "y": 3.8126687947513673
       },
       "isLocked": false,
-      "linkedName": "step-2-end"
+      "linkedName": null
     },
     {
       "anchor": {
-        "x": 6.737090163934426,
+        "x": 6.317520491803278,
         "y": 3.8032274590163935
       },
       "prevControl": {
-        "x": 6.080294219543695,
-        "y": 3.8099876007069144
+        "x": 6.611381838431238,
+        "y": 3.8015605655248272
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Walter"
+      "linkedName": "At-D"
     }
   ],
   "rotationTargets": [],
   "constraintZones": [],
   "pointTowardsZones": [],
-  "eventMarkers": [],
+  "eventMarkers": [
+    {
+      "name": "L4Pose",
+      "waypointRelativePos": 1.0,
+      "endWaypointRelativePos": null,
+      "command": {
+        "type": "named",
+        "data": {
+          "name": "L4Pose"
+        }
+      }
+    }
+  ],
   "globalConstraints": {
     "maxVelocity": 3.0,
     "maxAcceleration": 3.0,
@@ -42,10 +54,10 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -178.69804732742114
+    "rotation": 180.0
   },
   "reversed": false,
-  "folder": null,
+  "folder": "MiddlePaths",
   "idealStartingState": {
     "velocity": 0,
     "rotation": 180.0

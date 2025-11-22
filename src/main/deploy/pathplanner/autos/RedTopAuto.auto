@@ -7,25 +7,37 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Mid-2-D-S1"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "L4Pose"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Mid-2-D-S2"
+            "pathName": "RedTop - RedReefC"
           }
         },
         {
           "type": "wait",
           "data": {
-            "waitTime": 1.5
+            "waitTime": 0.5
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "visionAlignToScore"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "scoreL4"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "RedReefC - RedTopFeeder"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 0.5
           }
         },
         {
@@ -37,13 +49,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Leave-D"
+            "pathName": "RedTopFeeder - RedReefB"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 0.5
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "defaultPoses"
+            "name": "visionAlignToScore"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "scoreL4"
           }
         }
       ]

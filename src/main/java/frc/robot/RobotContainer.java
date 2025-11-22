@@ -6,6 +6,8 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.*;
 
+import java.util.Set;
+
 import com.ctre.phoenix6.SignalLogger;
 import com.ctre.phoenix6.swerve.SwerveModule.DriveRequestType;
 import com.ctre.phoenix6.swerve.SwerveRequest.FieldCentric;
@@ -20,6 +22,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
+import edu.wpi.first.wpilibj2.command.StartEndCommand;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.robot.commands.CommandManager;
@@ -27,13 +32,28 @@ import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.CommandSwerveDrivetrain;
 import frc.robot.subsystems.elevator.Elevator;
 import frc.robot.subsystems.arm.Arm;
-import frc.robot.subsystems.climber.Climber;
+import frc.robot.subsystems.climber.ClimbIntake;
+import frc.robot.subsystems.climber.ClimberPuller;
 import frc.robot.subsystems.funnel.Funnel;
 import frc.robot.subsystems.funnel.FunnelPivot;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.LimelightHelpers;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DriverStation;
+
 
 @Logged
 public class RobotContainer {
+
+  //For LimeLight NetworkTables
+  private final NetworkTable limelightleftTable = NetworkTableInstance.getDefault().getTable("limelight-left");
+  private final NetworkTable limelightrightTable = NetworkTableInstance.getDefault().getTable("limelight-right");
+  // Name of the active Limelight camera (matches the camera's name in web UI)
+private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change to "limelightRed" if swapping!!! BEACH BLITZ VERY IMPORTANT
+
+
+
   private double MaxSpeed =
       TunerConstants.kSpeedAt12Volts
           .baseUnitMagnitude(); // kSpeedAt12Volts desired top speed, tune later
@@ -76,7 +96,9 @@ public class RobotContainer {
   public final Intake intake;
 
   //public final Climber climber = new Climber();
-  public final Climber climber;
+  public final ClimberPuller climber;
+
+  public final ClimbIntake climbIntake;
 
  // public final Funnel funnel = new Funnel();
   public final Funnel funnel;
@@ -92,9 +114,8 @@ public class RobotContainer {
           .withDriveRequestType(
               DriveRequestType.OpenLoopVoltage); // Use open-loop control for drive motors
 
-
+//Auto Chooser Command initated
    private final SendableChooser<Command> autoChooser;
-
 
 
 
@@ -106,7 +127,9 @@ public class RobotContainer {
 
     intake = new Intake();
 
-    climber = new Climber();
+    climber = new ClimberPuller();
+    
+    climbIntake = new ClimbIntake();
 
     funnel = new Funnel();
 
@@ -120,13 +143,24 @@ public class RobotContainer {
      NamedCommands.registerCommand("L4Pose", CommandManager.L4Pose(elevator, arm));
      NamedCommands.registerCommand("print", Commands.runOnce(()-> System.out.println("commandsent")));
      NamedCommands.registerCommand("score", CommandManager.score(intake));
+     NamedCommands.registerCommand("visionAlign", visionAlignToScore());
+
 
 
     // Another option that allows you to specify the default auto by its name
     // autoChooser = AutoBuilder.buildAutoChooser("My Default Auto");
+
+    //Auto Selection is already handled by Glass.
      autoChooser = AutoBuilder.buildAutoChooser();
-     
+
+     //See if you need this if the options for the autos are not popping up.
+    //  autoChooser.setDefaultOption("1", Commands.print("1"));
+    //  autoChooser.addOption("BlueTopAuto", getAutonomousCommand());
+    //  autoChooser.addOption("BlueBottomAuto", getAutonomousCommand());
+    //  autoChooser.addOption("1", getAutonomousCommand());
+
      SmartDashboard.putData("Auto Chooser", autoChooser);
+     
   }
 
 
@@ -170,6 +204,12 @@ public class RobotContainer {
         climber.defaultClimberEncoder();
     }).ignoringDisable(true));
 
+    // Live Limelight TX and TY values for tuning (Turn off meaning comma it out if you need to cause of spam) BEACH BLITZ
+    new RunCommand(() -> {
+    SmartDashboard.putNumber("Limelight_TX", LimelightHelpers.getTX(ACTIVE_LIMELIGHT_NAME));
+    SmartDashboard.putNumber("Limelight_TY", LimelightHelpers.getTY(ACTIVE_LIMELIGHT_NAME));
+    }).schedule();
+
 
 
 //driver bindings
@@ -211,10 +251,10 @@ public class RobotContainer {
     joystick.a().onTrue(CommandManager.setPositions(arm, elevator, -0.125, 1.8));
 
     // high algae pose
-    joystick.y().onTrue(CommandManager.setPositions(arm, elevator, -0.125, 3.0));
+    joystick.y().onTrue(CommandManager.setPositions(arm, elevator, -0.125, 3.3));
 
     //processor pose
-    joystick.x().onTrue(CommandManager.setPositions(arm, elevator, -0.125, 0.3));
+    joystick.x().onTrue(CommandManager.setPositions(arm, elevator, -0.1, 0.3)); 
 
     //processor stow pose (don't need BUT ynk)
     //joystick.b().onTrue(CommandManager.setPositions(arm, elevator, 0.1, 0.1));
@@ -224,13 +264,26 @@ public class RobotContainer {
 
     //climb up, climber comes out, automatic
         //joystick.povUp().whileTrue(climber.runClimber(1));
-    joystick.povRight().onTrue(CommandManager.climberExtend(climber));
+    // joystick.povRight().onTrue(CommandManager.climberExtend(climber)); SEE IF THIS WORKS RIGHT D PAD THIS IS THE ONLY THING I COMMENT
 
     //climb down climber comes in
-    joystick.povDown().whileTrue(climber.runClimber(-1));
+    joystick.povDown().whileTrue(climber.runClimber(-0.65));
 
     // climb up climber comes out, for adjustment
     joystick.povUp().whileTrue(climber.runClimber(1));
+
+    // Climber Intake in (hold to run)
+    joystick.povLeft().toggleOnTrue(new StartEndCommand(
+        () -> climbIntake.intakeIn(), 
+        () -> climbIntake.stop()
+    ));
+
+    /*  Intake out (hold to run) //WE LOWKEY DONT NEED THIS
+    //joystick.rightBumper()
+    .whileTrue(new RunCommand(() -> intake.intakeOut(), intake))
+    .onFalse(new RunCommand(() -> intake.stop(), intake));
+    */
+
 
     // auto climber retract 
    // joystick.povLeft().onTrue(CommandManager.climberRetract(climber, funnelPivot));
@@ -240,8 +293,8 @@ public class RobotContainer {
 //operator bindings
 
     //auto coral intake
-    operator.povDown().onTrue(CommandManager.intakeCoral(funnel, intake));
-
+        operator.povDown().onTrue(CommandManager.intakeCoral(funnel, intake));
+    // operator.povDown().whileTrue(CommandManager.intakeCoral(funnel, intake));
     // move pivot funnel and arm for climb 
     operator.povRight().onTrue(CommandManager.climbPose(funnelPivot, arm));
     
@@ -267,7 +320,7 @@ public class RobotContainer {
     operator.leftBumper().onTrue(CommandManager.defaultArm(arm, elevator));
 
     //default elevator w/ arm out of the way
-   operator.leftTrigger().onTrue(CommandManager.setPositions(arm, elevator, 0.25, 0.01));
+   operator.leftTrigger().onTrue(CommandManager.setPositions(arm, elevator, 0.25, 0.0)); //0.01
     
 
 
@@ -336,6 +389,19 @@ public class RobotContainer {
   // "proportional control" is a control algorithm in which the output is proportional to the error.
   // in this case, we are going to return an angular velocity that is proportional to the
   // "tx" value from the Limelight.
+
+  //Start LimeLight Section -------------------------------------------------------------------------------------------------------
+  
+  //DetectingTagID's
+  private int getDetectedTagID(NetworkTable table) {
+    double tv = table.getEntry("tv").getDouble(0); // target valid
+    if (tv < 1) return -1; // no target
+
+    double tid = table.getEntry("tid").getDouble(-1); // tag ID
+    return (int) tid;
+}
+
+  //Limelight aim proportional (SAME OLD)
   double limelight_aim_proportional() {
     // kP (constant of proportionality)
     // this is a hand-tuned number that determines the aggressiveness of our proportional control
@@ -343,12 +409,11 @@ public class RobotContainer {
     // if it is too high, the robot will oscillate around.
     // if it is too low, the robot will never reach its target
     // if the robot never turns in the correct direction, kP should be inverted.
-    double kP = .0176;
+    double kP = .0176; //tune to match good speeds with either 0.01 or 0.03 BEACH BLITZ
 
     // tx ranges from (-hfov/2) to (hfov/2) in degrees. If your target is on the rightmost edge of
     // your limelight 3 feed, tx should return roughly 31 degrees.
-    double targetingAngularVelocity = LimelightHelpers.getTX("limelight") * kP;
-
+    double targetingAngularVelocity = LimelightHelpers.getTX(ACTIVE_LIMELIGHT_NAME) * kP;
     // convert to radians per second for our drive method
     targetingAngularVelocity *= MaxAngularRate;
 
@@ -357,15 +422,89 @@ public class RobotContainer {
 
     return targetingAngularVelocity;
   }
+  private void handleTagForAuto(int tagID, Set<Integer> relevantTags) {
+    if (!relevantTags.contains(tagID)) {
+        NamedCommands.getCommand("defaultPoses").schedule();
+        return;
+    }
 
-  double limelight_range_proportional() {
-    // double kP = .1;
-    double kP = .05;
-    double targetingForwardSpeed = LimelightHelpers.getTY("limelight") * kP;
+    switch (tagID) {
+        case 19:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 20:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 22:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 17:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 9:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 8:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 6:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 11:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 21:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        case 10:
+            visionAlignToScore()
+                .andThen(new WaitCommand(0.2))
+                .andThen(CommandManager.scoreL4(elevator, arm, intake))
+                .schedule();
+            break;
+        default:
+            // fallback if needed
+            break;
+    }
+
+}
+
+double limelight_range_proportional(double desiredTy) {
+    double kP = 0.05; // tuning constant
+    double error = LimelightHelpers.getTY(ACTIVE_LIMELIGHT_NAME) - desiredTy;
+    double targetingForwardSpeed = error * kP;
     targetingForwardSpeed *= MaxSpeed;
-    targetingForwardSpeed *= -1.0;
+    targetingForwardSpeed *= -1.0; // invert if necessary (just in case robot go backwards in auto.)
     return targetingForwardSpeed;
-  }
+}
+
 
  /*  public Command getTaxiAuto() {
     return 
@@ -377,14 +516,93 @@ public class RobotContainer {
       .andThen(drivetrain.applyRequest(() -> idle));
   }
  */
+/** 
+ * Vision-based alignment to an AprilTag using Limelight. 
+ * Stops when the horizontal error (tx) is small enough.
+ */
+public Command visionAlignToScore() {
+    final double ALIGN_THRESHOLD = 1.0;   // horizontal angle tolerance in degrees
+    final double DIST_THRESHOLD  = 0.02;  // forward/backward tolerance (tighter for scoring)
+    final double TARGET_TY_FOR_SCORING = 0.45; // tweak this until robot stops at exact scoring position
+    final double TARGET_TX_OFFSET = 0.0; // lateral offset if needed, positive = move right
 
-  public Command getAutonomousCommand() {
-    return autoChooser.getSelected();
-  }
+    return drivetrain.applyRequest(() -> {
+        // forward/backward speed proportional to error in ty
+        double forwardSpeed = (LimelightHelpers.getTY("limelight") - TARGET_TY_FOR_SCORING) * 0.05 * MaxSpeed * -1.0;
+        
+        // rotational speed to align horizontally with tag center + optional offset
+        double rotationSpeed = (LimelightHelpers.getTX("limelight") - TARGET_TX_OFFSET) * 0.0176 * MaxAngularRate * -1.0;
+
+        return robotRelativeDrive
+            .withVelocityX(forwardSpeed)
+            .withVelocityY(0) // change if lateral adjustment is needed
+            .withRotationalRate(rotationSpeed);
+    })
+    .until(() ->
+        Math.abs(LimelightHelpers.getTX("limelight") - TARGET_TX_OFFSET) < ALIGN_THRESHOLD &&
+        Math.abs(LimelightHelpers.getTY("limelight") - TARGET_TY_FOR_SCORING) < DIST_THRESHOLD
+    )
+    .andThen(drivetrain.applyRequest(() -> new SwerveRequest.Idle()));
+}
+
+
+
+private Set<Integer> getFirstTagSet(String autoName) {
+    switch (autoName) {
+        case "BlueBottomAuto": return Set.of(19);
+        case "BlueTopAuto":    return Set.of(17);
+        case "BlueMiddleAuto": return Set.of(21);
+        case "RedBottomAuto":  return Set.of(9);
+        case "RedTopAuto":     return Set.of(11);
+        case "RedMiddleAuto":  return Set.of(10);
+        default:               return Set.of();
+    }
+}
+
+private Set<Integer> getSecondTagSet(String autoName) {
+    switch (autoName) {
+        case "BlueBottomAuto": return Set.of(20);
+        case "BlueTopAuto":    return Set.of(22);
+        case "RedBottomAuto":  return Set.of(8);
+        case "RedTopAuto":     return Set.of(6);
+        default:               return Set.of();
+    }
+}
+
+public Command getAutonomousCommand() {
+    Command autoPath = autoChooser.getSelected();
+    if (autoPath == null) autoPath = Commands.none();
+
+    String autoName = autoPath.getName();
+
+    // Step 1: drive auto path
+    Command pathStep = autoPath;
+
+    // Step 2: check for first tag
+    Command firstTagStep = Commands.runOnce(() -> {
+    Set<Integer> firstTagSet = getFirstTagSet(autoName);
+    NetworkTable activeTable = ACTIVE_LIMELIGHT_NAME.equals("limelight") ? limelightleftTable : limelightrightTable;
+    int tagID = getDetectedTagID(activeTable);
+    handleTagForAuto(tagID, firstTagSet);
+});
+
+    // Step 3: check for second tag
+    Command secondTagStep = Commands.runOnce(() -> {
+        Set<Integer> secondTagSet = getSecondTagSet(autoName);
+        NetworkTable activeTable = ACTIVE_LIMELIGHT_NAME.equals("limelight") ? limelightleftTable : limelightrightTable;
+        int tagID = getDetectedTagID(activeTable);
+        handleTagForAuto(tagID, secondTagSet);
+    });
+
+    //return firstTagStep.andThen(pathStep).andThen(secondTagStep);
+    return pathStep.andThen(firstTagStep).andThen(secondTagStep);
+}
+
+
+}
 
  // double limelightMoveForeward() {
  //   double tagID = LimelightHelpers.getFiducialID("limelight");
  //   return tagID;
 
  // }
-}

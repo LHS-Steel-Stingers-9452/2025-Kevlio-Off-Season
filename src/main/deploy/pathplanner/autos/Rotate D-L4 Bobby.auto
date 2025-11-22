@@ -37,13 +37,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Leave-D"
+            "pathName": "Rotate Leave-D"
           }
         },
         {
           "type": "named",
           "data": {
             "name": "defaultPoses"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 3.0
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "BlueMiddleSelfOriEndPosition"
           }
         }
       ]

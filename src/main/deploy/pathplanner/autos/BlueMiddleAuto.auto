@@ -7,43 +7,31 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Mid-2-D-S1"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "L4Pose"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Mid-2-D-S2"
+            "pathName": "BlueCenter - BlueReefD"
           }
         },
         {
           "type": "wait",
           "data": {
-            "waitTime": 1.5
+            "waitTime": 0.5
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "score"
+            "name": "scoreL4"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "scoreL4"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "Leave-D"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "defaultPoses"
+            "pathName": "BlueReefD - MiddleBlueSelfField"
           }
         }
       ]

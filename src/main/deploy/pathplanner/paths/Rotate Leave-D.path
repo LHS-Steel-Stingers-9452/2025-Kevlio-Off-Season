@@ -16,16 +16,16 @@
     },
     {
       "anchor": {
-        "x": 6.737090163934426,
+        "x": 6.292598684210526,
         "y": 3.8032274590163935
       },
       "prevControl": {
-        "x": 6.080294219543695,
+        "x": 5.635802739819795,
         "y": 3.8099876007069144
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Walter"
+      "linkedName": "MiddleBlueSelfOri"
     }
   ],
   "rotationTargets": [],
@@ -42,7 +42,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -178.69804732742114
+    "rotation": 178.88760038370222
   },
   "reversed": false,
   "folder": null,

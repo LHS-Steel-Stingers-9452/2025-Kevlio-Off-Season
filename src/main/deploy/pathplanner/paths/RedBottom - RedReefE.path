@@ -3,29 +3,29 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 5.897950819672132,
-        "y": 3.8032274590163935
+        "x": 10.4203125,
+        "y": 7.527302631578947
       },
       "prevControl": null,
       "nextControl": {
-        "x": 6.318661268021863,
-        "y": 3.791718981515936
+        "x": 11.093832236842104,
+        "y": 6.170641447368421
       },
       "isLocked": false,
-      "linkedName": "step-2-end"
+      "linkedName": "RedBottom"
     },
     {
       "anchor": {
-        "x": 6.737090163934426,
-        "y": 3.8032274590163935
+        "x": 12.286924342105262,
+        "y": 5.429769736842105
       },
       "prevControl": {
-        "x": 6.080294219543695,
-        "y": 3.8099876007069144
+        "x": 11.23738369641486,
+        "y": 6.303491818699616
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Walter"
+      "linkedName": "RedReefE"
     }
   ],
   "rotationTargets": [],
@@ -42,7 +42,7 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -178.69804732742114
+    "rotation": -60.80251395393553
   },
   "reversed": false,
   "folder": null,
