@@ -16,7 +16,12 @@ import com.pathplanner.lib.auto.NamedCommands;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 
 import edu.wpi.first.epilogue.Logged;
+import edu.wpi.first.math.controller.HolonomicDriveController;
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -37,6 +42,7 @@ import frc.robot.subsystems.climber.ClimberPuller;
 import frc.robot.subsystems.funnel.Funnel;
 import frc.robot.subsystems.funnel.FunnelPivot;
 import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.vision.Vision;
 import frc.robot.LimelightHelpers;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -50,7 +56,6 @@ public class RobotContainer {
   private final NetworkTable limelightleftTable = NetworkTableInstance.getDefault().getTable("limelight-left");
   private final NetworkTable limelightrightTable = NetworkTableInstance.getDefault().getTable("limelight-right");
   // Name of the active Limelight camera (matches the camera's name in web UI)
-private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change to "limelightRed" if swapping!!! BEACH BLITZ VERY IMPORTANT
 
 
 
@@ -106,6 +111,8 @@ private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change 
   //public final FunnelPivot funnelPivot = new FunnelPivot();
   public final FunnelPivot funnelPivot;
 
+  public final Vision vision;
+
 
   private final SwerveRequest.RobotCentric robotRelativeDrive =
       new SwerveRequest.RobotCentric()
@@ -135,6 +142,8 @@ private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change 
 
     funnelPivot = new FunnelPivot();
 
+    vision = new Vision(drivetrain);
+
     configureBindings();
 
     //register named commands
@@ -143,7 +152,7 @@ private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change 
      NamedCommands.registerCommand("L4Pose", CommandManager.L4Pose(elevator, arm));
      NamedCommands.registerCommand("print", Commands.runOnce(()-> System.out.println("commandsent")));
      NamedCommands.registerCommand("score", CommandManager.score(intake));
-     NamedCommands.registerCommand("visionAlign", visionAlignToScore());
+     NamedCommands.registerCommand("visionAlign", visionAlignToScorePose());
 
 
 
@@ -203,13 +212,6 @@ private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change 
         elevator.defaultElevatorEncoder();
         climber.defaultClimberEncoder();
     }).ignoringDisable(true));
-
-    // Live Limelight TX and TY values for tuning (Turn off meaning comma it out if you need to cause of spam) BEACH BLITZ
-    new RunCommand(() -> {
-    SmartDashboard.putNumber("Limelight_TX", LimelightHelpers.getTX(ACTIVE_LIMELIGHT_NAME));
-    SmartDashboard.putNumber("Limelight_TY", LimelightHelpers.getTY(ACTIVE_LIMELIGHT_NAME));
-    }).schedule();
-
 
 
 //driver bindings
@@ -278,6 +280,12 @@ private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change 
         () -> climbIntake.stop()
     ));
 
+     // Vision assist for driver: right trigger aligns to scoring pose
+     joystick.rightTrigger().whileTrue(
+        visionAlignToScorePose()
+    );
+
+    
     /*  Intake out (hold to run) //WE LOWKEY DONT NEED THIS
     //joystick.rightBumper()
     .whileTrue(new RunCommand(() -> intake.intakeOut(), intake))
@@ -334,48 +342,61 @@ private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change 
     drivetrain.registerTelemetry(logger::telemeterize);
 
 
+// Driver bindings
+drivetrain.setDefaultCommand(
+    drivetrain.applyRequest(
+        () -> {
+            // Default normal drive speed
+            double xSpeed = -joystick.getLeftY() * MaxSpeed;
+            double ySpeed = -joystick.getLeftX() * MaxSpeed;
+            double rotSpeed = -joystick.getRightX() * MaxAngularRate;
+
+            // If left bumper is held, scale down for slow mode
+            if (joystick.leftBumper().getAsBoolean()) {
+                xSpeed *= 0.25;
+                ySpeed *= 0.25;
+            }
+
+            return drive
+                .withVelocityX(xSpeed)
+                .withVelocityY(ySpeed)
+                .withRotationalRate(rotSpeed);
+        }
+    )
+);
+
+// Vision alignment for driver
+joystick.rightTrigger().whileTrue(
+    drivetrain.applyRequest(
+        () -> {
+            // While right trigger held, override rotational and forward speed with vision
+            SwerveRequest.RobotCentric request = new SwerveRequest.RobotCentric();
+            double forwardSpeed = (LimelightHelpers.getTY(ACTIVE_LIMELIGHT_NAME) - 0.45) * 0.05 * MaxSpeed * -1.0;
+            double rotationSpeed = (LimelightHelpers.getTX(ACTIVE_LIMELIGHT_NAME) - 0.0) * 0.0176 * MaxAngularRate * -1.0;
+            return request.withVelocityX(forwardSpeed).withVelocityY(0).withRotationalRate(rotationSpeed);
+        }
+    )
+);
+
    
-//slow button that DOES WORK (in theory), driver
-    joystick
-        .leftBumper()
-        .whileTrue(
-            drivetrain.applyRequest(
-                () -> 
-                drive
-                .withVelocityX(
-                   (-joystick.getLeftY() * MaxSpeed)*(.25)) 
-                .withVelocityY(
-                    (-joystick.getLeftX() * MaxSpeed)*(.25))
-                .withRotationalRate(
-                    -joystick.getRightX()
-                        *MaxAngularRate)
+// //slow button that DOES WORK (in theory), driver
+//     joystick
+//         .leftBumper()
+//         .whileTrue(
+//             drivetrain.applyRequest(
+//                 () -> 
+//                 drive
+//                 .withVelocityX(
+//                    (-joystick.getLeftY() * MaxSpeed)*(.25)) 
+//                 .withVelocityY(
+//                     (-joystick.getLeftX() * MaxSpeed)*(.25))
+//                 .withRotationalRate(
+//                     -joystick.getRightX()
+//                         *MaxAngularRate)
                                   
-                ));
+//                 ));
 
-// vision bindings, for driver( he doesn't even use it T-T )
 
-    //lock onto april tag
- /*        joystick
-            .rightTrigger()
-            .whileTrue(
-                drivetrain.applyRequest(
-                    () -> {
-                    double rotation = limelight_aim_proportional();
-                    double xSpeed = limelight_range_proportional();
-
-                    SmartDashboard.putNumber("xSpeed", xSpeed);
-                    SmartDashboard.putNumber("rotation", rotation);
-
-                    return robotRelativeDrive
-                        .withVelocityX(
-                            -joystick.getLeftY()
-                                * MaxSpeed) // Drive forward with negative Y (forward)
-                        .withVelocityY(
-                            -joystick.getLeftX() * MaxSpeed) // Drive left with negative X (left)
-                        .withRotationalRate(
-                            rotation); // Drive counterclockwise with negative X (left)
-                    }));
-                    */
                 }
 
 
@@ -390,163 +411,69 @@ private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left"; // change 
   // in this case, we are going to return an angular velocity that is proportional to the
   // "tx" value from the Limelight.
 
-  //Start LimeLight Section -------------------------------------------------------------------------------------------------------
-  
-  //DetectingTagID's
-  private int getDetectedTagID(NetworkTable table) {
+// Start Limelight / Vision Section -----------------------------------------------------------------------
+public PIDController XY_PID = new PIDController(3.6, 0, 0);
+public ProfiledPIDController THETA_PID = new ProfiledPIDController(5, 0, 0, new TrapezoidProfile.Constraints(Units.degreesToRadians(270d), Units.degreesToRadians(450d)));
+
+
+
+//method that calls hDC periodically, peridocally calucate get pose, pushes the speeds into the command for the swerve drive speed so it needs it to get to the reef
+//Public Chasssis speed get AUTO Speed
+// feed speed into drive command instead of controller
+//robot should drive automatically to solve its error of PID. holding a button WHILE TRUE.
+// Look into default commands and also requirement commands so it doesnt use teleop drive for auto alignment
+
+
+
+
+public HolonomicDriveController TELE_HDC = new HolonomicDriveController(
+    XY_PID, 
+    XY_PID,
+    THETA_PID
+);
+
+
+// Name of the active Limelight camera (matches camera in web UI)
+private static final String ACTIVE_LIMELIGHT_NAME = "limelight-left";
+
+// Get detected tag ID
+private int getDetectedTagID(NetworkTable table) {
     double tv = table.getEntry("tv").getDouble(0); // target valid
     if (tv < 1) return -1; // no target
-
-    double tid = table.getEntry("tid").getDouble(-1); // tag ID
-    return (int) tid;
+    return (int) table.getEntry("tid").getDouble(-1); // tag ID
 }
 
-  //Limelight aim proportional (SAME OLD)
-  double limelight_aim_proportional() {
-    // kP (constant of proportionality)
-    // this is a hand-tuned number that determines the aggressiveness of our proportional control
-    // loop
-    // if it is too high, the robot will oscillate around.
-    // if it is too low, the robot will never reach its target
-    // if the robot never turns in the correct direction, kP should be inverted.
-    double kP = .0176; //tune to match good speeds with either 0.01 or 0.03 BEACH BLITZ
+public Command visionAlignToScorePose() {
+    // Define target pose speeds (these are tuned values)
+    final double FORWARD_SPEED = 0.3 * MaxSpeed;
+    final double ROTATION_SPEED = 0.15 * MaxAngularRate;
 
-    // tx ranges from (-hfov/2) to (hfov/2) in degrees. If your target is on the rightmost edge of
-    // your limelight 3 feed, tx should return roughly 31 degrees.
-    double targetingAngularVelocity = LimelightHelpers.getTX(ACTIVE_LIMELIGHT_NAME) * kP;
-    // convert to radians per second for our drive method
-    targetingAngularVelocity *= MaxAngularRate;
+    return drivetrain.applyRequest(() -> {
+        // Drive straight forward toward scoring pose
+        return robotRelativeDrive
+            .withVelocityX(FORWARD_SPEED)
+            .withVelocityY(0)
+            .withRotationalRate(0); // keep heading fixed
+    })
+    .withTimeout(2.0) // stop after 2 seconds or adjust based on field distance
+    .andThen(drivetrain.applyRequest(() -> new SwerveRequest.Idle()));
+}
 
-    // invert since tx is positive when the target is to the right of the crosshair
-    targetingAngularVelocity *= -1.0;
-
-    return targetingAngularVelocity;
-  }
-  private void handleTagForAuto(int tagID, Set<Integer> relevantTags) {
+// Handle auto actions based on detected tags
+private void handleTagForAuto(int tagID, Set<Integer> relevantTags) {
     if (!relevantTags.contains(tagID)) {
         NamedCommands.getCommand("defaultPoses").schedule();
         return;
     }
 
-    switch (tagID) {
-        case 19:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 20:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 22:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 17:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 9:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 8:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 6:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 11:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 21:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        case 10:
-            visionAlignToScore()
-                .andThen(new WaitCommand(0.2))
-                .andThen(CommandManager.scoreL4(elevator, arm, intake))
-                .schedule();
-            break;
-        default:
-            // fallback if needed
-            break;
-    }
-
+    // Align to scoring pose (TX/TY-free) then score L4
+    visionAlignToScorePose()
+        .andThen(new WaitCommand(0.2))
+        .andThen(CommandManager.scoreL4(elevator, arm, intake))
+        .schedule();
 }
 
-double limelight_range_proportional(double desiredTy) {
-    double kP = 0.05; // tuning constant
-    double error = LimelightHelpers.getTY(ACTIVE_LIMELIGHT_NAME) - desiredTy;
-    double targetingForwardSpeed = error * kP;
-    targetingForwardSpeed *= MaxSpeed;
-    targetingForwardSpeed *= -1.0; // invert if necessary (just in case robot go backwards in auto.)
-    return targetingForwardSpeed;
-}
-
-
- /*  public Command getTaxiAuto() {
-    return 
-    drivetrain.applyRequest(() ->
-      drive.withVelocityX(0.7)
-      .withVelocityY(0)
-     .withRotationalRate(0))
-      .withTimeout(3)
-      .andThen(drivetrain.applyRequest(() -> idle));
-  }
- */
-/** 
- * Vision-based alignment to an AprilTag using Limelight. 
- * Stops when the horizontal error (tx) is small enough.
- */
-public Command visionAlignToScore() {
-    final double ALIGN_THRESHOLD = 1.0;   // horizontal angle tolerance in degrees
-    final double DIST_THRESHOLD  = 0.02;  // forward/backward tolerance (tighter for scoring)
-    final double TARGET_TY_FOR_SCORING = 0.45; // tweak this until robot stops at exact scoring position
-    final double TARGET_TX_OFFSET = 0.0; // lateral offset if needed, positive = move right
-
-    return drivetrain.applyRequest(() -> {
-        // forward/backward speed proportional to error in ty
-        double forwardSpeed = (LimelightHelpers.getTY("limelight") - TARGET_TY_FOR_SCORING) * 0.05 * MaxSpeed * -1.0;
-        
-        // rotational speed to align horizontally with tag center + optional offset
-        double rotationSpeed = (LimelightHelpers.getTX("limelight") - TARGET_TX_OFFSET) * 0.0176 * MaxAngularRate * -1.0;
-
-        return robotRelativeDrive
-            .withVelocityX(forwardSpeed)
-            .withVelocityY(0) // change if lateral adjustment is needed
-            .withRotationalRate(rotationSpeed);
-    })
-    .until(() ->
-        Math.abs(LimelightHelpers.getTX("limelight") - TARGET_TX_OFFSET) < ALIGN_THRESHOLD &&
-        Math.abs(LimelightHelpers.getTY("limelight") - TARGET_TY_FOR_SCORING) < DIST_THRESHOLD
-    )
-    .andThen(drivetrain.applyRequest(() -> new SwerveRequest.Idle()));
-}
-
-
-
+// Auto tag sets for first and second check
 private Set<Integer> getFirstTagSet(String autoName) {
     switch (autoName) {
         case "BlueBottomAuto": return Set.of(19);
@@ -555,7 +482,7 @@ private Set<Integer> getFirstTagSet(String autoName) {
         case "RedBottomAuto":  return Set.of(9);
         case "RedTopAuto":     return Set.of(11);
         case "RedMiddleAuto":  return Set.of(10);
-        default:               return Set.of();
+        default:               return Set.of(); // fallback empty set
     }
 }
 
@@ -565,44 +492,31 @@ private Set<Integer> getSecondTagSet(String autoName) {
         case "BlueTopAuto":    return Set.of(22);
         case "RedBottomAuto":  return Set.of(8);
         case "RedTopAuto":     return Set.of(6);
-        default:               return Set.of();
+        default:               return Set.of(); // fallback empty set
     }
 }
 
+// Autonomous command sequence
 public Command getAutonomousCommand() {
     Command autoPath = autoChooser.getSelected();
     if (autoPath == null) autoPath = Commands.none();
 
     String autoName = autoPath.getName();
 
-    // Step 1: drive auto path
-    Command pathStep = autoPath;
-
-    // Step 2: check for first tag
     Command firstTagStep = Commands.runOnce(() -> {
-    Set<Integer> firstTagSet = getFirstTagSet(autoName);
-    NetworkTable activeTable = ACTIVE_LIMELIGHT_NAME.equals("limelight") ? limelightleftTable : limelightrightTable;
-    int tagID = getDetectedTagID(activeTable);
-    handleTagForAuto(tagID, firstTagSet);
-});
+        Set<Integer> firstTagSet = getFirstTagSet(autoName);
+        NetworkTable activeTable = ACTIVE_LIMELIGHT_NAME.equals("limelight-left") ? limelightleftTable : limelightrightTable;
+        int tagID = getDetectedTagID(activeTable);
+        handleTagForAuto(tagID, firstTagSet);
+    });
 
-    // Step 3: check for second tag
     Command secondTagStep = Commands.runOnce(() -> {
         Set<Integer> secondTagSet = getSecondTagSet(autoName);
-        NetworkTable activeTable = ACTIVE_LIMELIGHT_NAME.equals("limelight") ? limelightleftTable : limelightrightTable;
+        NetworkTable activeTable = ACTIVE_LIMELIGHT_NAME.equals("limelight-left") ? limelightleftTable : limelightrightTable;
         int tagID = getDetectedTagID(activeTable);
         handleTagForAuto(tagID, secondTagSet);
     });
 
-    //return firstTagStep.andThen(pathStep).andThen(secondTagStep);
-    return pathStep.andThen(firstTagStep).andThen(secondTagStep);
+    return autoPath.andThen(firstTagStep).andThen(secondTagStep);
 }
-
-
 }
-
- // double limelightMoveForeward() {
- //   double tagID = LimelightHelpers.getFiducialID("limelight");
- //   return tagID;
-
- // }

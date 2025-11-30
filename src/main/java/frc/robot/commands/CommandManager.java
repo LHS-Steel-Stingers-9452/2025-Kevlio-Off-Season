@@ -15,6 +15,7 @@ import frc.robot.subsystems.CommandSwerveDrivetrain;
 import com.pathplanner.lib.path.PathPlannerPath;
 
 
+
 public class CommandManager {
     //  work in progress (desperately needs some un-.andThen'ining)
   /*   public static Command coralL4(Arm arm, Elevator elevator,Intake intake){
@@ -142,6 +143,8 @@ public static Command climbPose(FunnelPivot funnelPivot, Arm arm){
     .until(()-> climber.climberPosition() < 0.8)
     .andThen(funnelPivot.runPivot(0.1)
     .withTimeout(0.1));
+
+
 
 
 }

@@ -27,7 +27,7 @@ public class Robot extends TimedRobot {
 
   private final RobotContainer m_robotContainer;
 
-  public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
+  // public final CommandSwerveDrivetrain drivetrain = TunerConstants.createDrivetrain();
 
   //private final SwerveRequest.Idle idle = new SwerveRequest.Idle();
 
@@ -59,6 +59,7 @@ public class Robot extends TimedRobot {
       // This can be helpful in a pinch to reduce network bandwidth or log file size
       // while still logging important information.
       config.minimumImportance = Logged.Importance.DEBUG;
+      
     });
     Epilogue.bind(this);
   }
